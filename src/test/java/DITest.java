@@ -1,4 +1,5 @@
 import com.example.tdd.Context;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -10,6 +11,38 @@ public class DITest {
     }
     static public class ComponentWithDefaultConstructor implements Component {
         public ComponentWithDefaultConstructor() {
+        }
+    }
+
+    static public class ComponentWithConstructor implements Component {
+        String name;
+        @Inject
+        public ComponentWithConstructor(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+    }
+
+    static public class ComponentWithMultipleParameterConstructor implements Component {
+        String name;
+
+        Integer age;
+
+        @Inject
+        public ComponentWithMultipleParameterConstructor(String name, Integer age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Integer getAge() {
+            return age;
         }
     }
 
@@ -40,4 +73,37 @@ public class DITest {
         assertNotNull(instance);
         assertTrue(instance instanceof Component);
     }
+
+    @Test
+    void should_bind_type_to_a_class_with_inject_constructor() {
+        Context context = new Context();
+
+        context.bind(Component.class, ComponentWithConstructor.class);
+        context.bind(String.class, "foo");
+
+        ComponentWithConstructor instance = (ComponentWithConstructor) context.get(Component.class);
+        assertNotNull(instance);
+        assertTrue(instance instanceof Component);
+        assertSame(instance.getName(), "foo");
+    }
+
+    @Test
+    void should_bind_type_to_a_class_with_inject_multiple_parameter_constructor() {
+        Context context = new Context();
+
+        context.bind(Component.class, ComponentWithMultipleParameterConstructor.class);
+        context.bind(String.class, "foo");
+        Integer age = Integer.valueOf(150);
+        context.bind(Integer.class, age);
+
+        ComponentWithMultipleParameterConstructor instance = (ComponentWithMultipleParameterConstructor) context.get(Component.class);
+        assertNotNull(instance);
+        assertTrue(instance instanceof Component);
+        assertSame(instance.getName(), "foo");
+        assertSame(instance.getAge(), age);
+    }
+
+    //    @Test
+//    void should_bind_type_to_a_class_with_transitive_dependency() {
+//    }
 }
