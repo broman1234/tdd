@@ -5,20 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
-interface Component {
-}
-
-class ComponentWithDefaultConstructor implements Component {
-    public ComponentWithDefaultConstructor() {
-
+public class DITest {
+    interface Component {
     }
-}
-class DITest {
+    static public class ComponentWithDefaultConstructor implements Component {
+        public ComponentWithDefaultConstructor() {
+        }
+    }
 
-    //todo: Instance
-
-
+    //todo: context should get a constructed component instance
+    //todo: get and verify this component instance from context
 
     @Test
     void should_bind_type_to_a_specific_instance() {
@@ -30,15 +26,18 @@ class DITest {
         assertSame(instance, context.get(Component.class));
     }
 
+
+    // todo: context should construct a component instance using no args constructor with Class as input
+    // todo: get and this component instance from context is not null
+    // todo: verify this component instance from context is an instance of Component
     @Test
-    void should_bind_type_to_a_no_args_contructor() {
+    void should_bind_type_to_a_no_args_constructor() {
         Context context = new Context();
-        ComponentWithDefaultConstructor constructor = new ComponentWithDefaultConstructor();
 
         context.bind(Component.class, ComponentWithDefaultConstructor.class);
-        Component instance = context.get(Component.class);
 
+        Component instance = context.get(Component.class);
         assertNotNull(instance);
-        assertTrue(instance instanceof ComponentWithDefaultConstructor);
+        assertTrue(instance instanceof Component);
     }
 }
