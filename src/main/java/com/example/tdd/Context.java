@@ -7,11 +7,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Context {
     Map<Class<?>, Provider<?>> providers = new HashMap<>();
@@ -28,19 +24,23 @@ public class Context {
 
     public <Component, Implementation extends Component> void bind(Class<Component> componentClass, Class<Implementation> componentWithConstructorClass) {
         providers.put(componentClass, (Provider<Implementation>) () -> {
-            try {
-                Stream<Constructor<?>> constructorStream = Arrays.stream(componentWithConstructorClass.getDeclaredConstructors()).filter(constructor -> constructor.isAnnotationPresent(Inject.class));
+            Constructor<?> constructor = getInjectConstructor(componentWithConstructorClass);
+            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(this::get).toArray(Object[]::new);
 
-                Optional<Constructor<?>> constructorOptional = constructorStream.findFirst();
-                if (constructorOptional.isPresent()) {
-                    Constructor<?> constructor = constructorOptional.get();
-                    Class<?>[] parameterTypes = constructor.getParameterTypes();
-                    List<?> dependencies = Arrays.stream(parameterTypes).map(parameterType -> providers.get(parameterType).get()).collect(Collectors.toList());
-                    return (Implementation) constructor.newInstance(dependencies.toArray());
-                }
-                return componentWithConstructorClass.getConstructor().newInstance();
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                     NoSuchMethodException e) {
+            try {
+                return (Implementation) constructor.newInstance(dependencies);
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
+    }
+
+    private static <Component, Implementation extends Component> Constructor<?> getInjectConstructor(Class<Implementation> componentWithConstructorClass) {
+        return Arrays.stream(componentWithConstructorClass.getDeclaredConstructors()).filter(c -> c.isAnnotationPresent(Inject.class)).findFirst().orElseGet(() -> {
+            try {
+                return componentWithConstructorClass.getDeclaredConstructor();
+            } catch (NoSuchMethodException e) {
                 throw new RuntimeException(e);
             }
         });
