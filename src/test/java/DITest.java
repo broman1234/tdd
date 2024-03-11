@@ -9,6 +9,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DITest {
     interface Component {
     }
+
+    interface Dependency {
+    }
+
+    static public class DependencyWithMultipleParameterConstructor implements Dependency{
+        String name;
+        Integer age;
+
+        @Inject
+        public DependencyWithMultipleParameterConstructor(String name, Integer age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Integer getAge() {
+            return age;
+        }
+    }
+
+    static public class ComponentWithTransitiveDependencyConstructor implements Component {
+        Dependency dependency;
+
+        @Inject
+        public ComponentWithTransitiveDependencyConstructor(Dependency dependency) {
+            this.dependency = dependency;
+        }
+
+        public Dependency getDependency() {
+            return dependency;
+        }
+    }
     static public class ComponentWithDefaultConstructor implements Component {
         public ComponentWithDefaultConstructor() {
         }
@@ -103,7 +138,18 @@ public class DITest {
         assertSame(instance.getAge(), age);
     }
 
-    //    @Test
-//    void should_bind_type_to_a_class_with_transitive_dependency() {
-//    }
+    @Test
+    void should_bind_type_to_a_class_with_transitive_dependency() {
+        Context context = new Context();
+
+        context.bind(Component.class, ComponentWithTransitiveDependencyConstructor.class);
+        context.bind(Dependency.class, DependencyWithMultipleParameterConstructor.class);
+        context.bind(String.class, "foo");
+        Integer age = Integer.valueOf(150);
+        context.bind(Integer.class, age);
+
+        ComponentWithTransitiveDependencyConstructor instance = (ComponentWithTransitiveDependencyConstructor) context.get(Component.class);
+        assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getName(), "foo");
+        assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getAge(), age);
+    }
 }
