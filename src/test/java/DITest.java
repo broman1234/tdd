@@ -1,9 +1,13 @@
+import com.example.tdd.AnnotatedConstructorNotFoundException;
 import com.example.tdd.Context;
+import com.example.tdd.MultipleInjectedConstructorException;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DITest {
@@ -11,6 +15,29 @@ public class DITest {
     }
 
     interface Dependency {
+    }
+
+    static public class ComponentWithMultipleAnnotatedConstructor implements Component {
+        String name;
+        Integer age;
+
+        @Inject
+        public ComponentWithMultipleAnnotatedConstructor(String name) {
+            this.name = name;
+        }
+
+        @Inject
+        public ComponentWithMultipleAnnotatedConstructor(Integer age) {
+            this.age = age;
+        }
+    }
+
+    static public class ComponentWithNoAnnotatedConstruction implements Component {
+        String name;
+
+        public ComponentWithNoAnnotatedConstruction(String name) {
+            this.name = name;
+        }
     }
 
     static public class DependencyWithMultipleParameterConstructor implements Dependency{
@@ -81,12 +108,14 @@ public class DITest {
         }
     }
 
-    //todo: context should get a constructed component instance
-    //todo: get and verify this component instance from context
+    Context context;
+    @BeforeEach
+    void setUp() {
+        context = new Context();
+    }
 
     @Test
     void should_bind_type_to_a_specific_instance() {
-        Context context = new Context();
         Component instance = new Component() {};
 
         context.bind(Component.class, instance);
@@ -100,7 +129,6 @@ public class DITest {
     // todo: verify this component instance from context is an instance of Component
     @Test
     void should_bind_type_to_a_no_args_constructor() {
-        Context context = new Context();
 
         context.bind(Component.class, ComponentWithDefaultConstructor.class);
 
@@ -111,7 +139,6 @@ public class DITest {
 
     @Test
     void should_bind_type_to_a_class_with_inject_constructor() {
-        Context context = new Context();
 
         context.bind(Component.class, ComponentWithConstructor.class);
         context.bind(String.class, "foo");
@@ -124,7 +151,6 @@ public class DITest {
 
     @Test
     void should_bind_type_to_a_class_with_inject_multiple_parameter_constructor() {
-        Context context = new Context();
 
         context.bind(Component.class, ComponentWithMultipleParameterConstructor.class);
         context.bind(String.class, "foo");
@@ -140,7 +166,6 @@ public class DITest {
 
     @Test
     void should_bind_type_to_a_class_with_transitive_dependency() {
-        Context context = new Context();
 
         context.bind(Component.class, ComponentWithTransitiveDependencyConstructor.class);
         context.bind(Dependency.class, DependencyWithMultipleParameterConstructor.class);
@@ -151,5 +176,26 @@ public class DITest {
         ComponentWithTransitiveDependencyConstructor instance = (ComponentWithTransitiveDependencyConstructor) context.get(Component.class);
         assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getName(), "foo");
         assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getAge(), age);
+    }
+
+    //1. 实现类中存在多个家了@Inject 注解的constructor的时候需要指定一个人自定的exception
+    //2. 实现类中既不存在，加了@inject注解的构造器 也不存在默认的空参构造器 指定一个异常报错
+    //3. 如果在实现类寻找Dependency的过程中遇到了 从providers中找不到的情况 需要报Dependency找不到的自定义异常
+
+    @Test
+    void should_throw_exception_when_binding_type_to_a_class_given_multiple_annotated_constructor() {
+        context.bind(Component.class, ComponentWithMultipleAnnotatedConstructor.class);
+        context.bind(String.class, "foo");
+        context.bind(Integer.class, 150);
+
+        assertThrows(MultipleInjectedConstructorException.class, () -> context.get(Component.class));
+    }
+
+    @Test
+    void should_throw_exception_when_binding_type_to_a_class_given_no_annotated_constructor_can_be_found() {
+        context.bind(Component.class, ComponentWithNoAnnotatedConstruction.class);
+        context.bind(String.class, "foo");
+
+        assertThrows(AnnotatedConstructorNotFoundException.class, () -> context.get(Component.class));
     }
 }
