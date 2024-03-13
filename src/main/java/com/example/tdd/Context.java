@@ -7,6 +7,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -38,19 +39,17 @@ public class Context {
     }
 
     private static <Component, Implementation extends Component> Constructor<?> getInjectConstructor(Class<Implementation> componentWithConstructorClass) {
-        if (componentWithConstructorClass.getDeclaredConstructors().length > 1) {
+        Constructor<?>[] declaredConstructors = componentWithConstructorClass.getDeclaredConstructors();
+        List<Constructor<?>> injectedConstructor = Arrays.stream(declaredConstructors).filter(c -> c.isAnnotationPresent(Inject.class)).toList();
+        if (injectedConstructor.size() > 1) {
             throw new MultipleInjectedConstructorException();
         }
-        //实现类中既不存在，加了@inject注解的构造器 也不存在默认的空参构造器 指定一个异常报错
-        if (Arrays.stream(componentWithConstructorClass.getDeclaredConstructors()).filter(c -> c.isAnnotationPresent(Inject.class)).toList().size() == 0 && Arrays.stream(componentWithConstructorClass.getDeclaredConstructors()).filter(c -> c.getParameterCount() == 0).toList().size() == 0) {
-            throw new AnnotatedConstructorNotFoundException();
+        if (injectedConstructor.size() == 1) {
+            return injectedConstructor.get(0);
         }
-        return Arrays.stream(componentWithConstructorClass.getDeclaredConstructors()).filter(c -> c.isAnnotationPresent(Inject.class)).findFirst().orElseGet(() -> {
-            try {
-                return componentWithConstructorClass.getDeclaredConstructor();
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        // 当找不到@Injected注解的构造器时，去寻找无参构造器
+        //   如果存在无参构造器，那么返回这个无参构造器
+        //   如果不存在无参构造器，抛出异常
+        return Arrays.stream(declaredConstructors).filter(c -> c.getParameterCount() == 0).findFirst().orElseThrow(() -> {throw new AnnotatedConstructorNotFoundException();});
     }
 }
