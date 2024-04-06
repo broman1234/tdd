@@ -120,7 +120,7 @@ public class DITest {
 
         context.bind(Component.class, instance);
 
-        assertSame(instance, context.get(Component.class));
+        assertSame(instance, context.get(Component.class).get());
     }
 
 
@@ -132,7 +132,7 @@ public class DITest {
 
         context.bind(Component.class, ComponentWithDefaultConstructor.class);
 
-        Component instance = context.get(Component.class);
+        Component instance = context.get(Component.class).get();
         assertNotNull(instance);
         assertTrue(instance instanceof Component);
     }
@@ -143,7 +143,7 @@ public class DITest {
         context.bind(Component.class, ComponentWithConstructor.class);
         context.bind(String.class, "foo");
 
-        ComponentWithConstructor instance = (ComponentWithConstructor) context.get(Component.class);
+        ComponentWithConstructor instance = (ComponentWithConstructor) context.get(Component.class).get();
         assertNotNull(instance);
         assertTrue(instance instanceof Component);
         assertSame(instance.getName(), "foo");
@@ -157,7 +157,7 @@ public class DITest {
         Integer age = Integer.valueOf(150);
         context.bind(Integer.class, age);
 
-        ComponentWithMultipleParameterConstructor instance = (ComponentWithMultipleParameterConstructor) context.get(Component.class);
+        ComponentWithMultipleParameterConstructor instance = (ComponentWithMultipleParameterConstructor) context.get(Component.class).get();
         assertNotNull(instance);
         assertTrue(instance instanceof Component);
         assertSame(instance.getName(), "foo");
@@ -173,7 +173,7 @@ public class DITest {
         Integer age = Integer.valueOf(150);
         context.bind(Integer.class, age);
 
-        ComponentWithTransitiveDependencyConstructor instance = (ComponentWithTransitiveDependencyConstructor) context.get(Component.class);
+        ComponentWithTransitiveDependencyConstructor instance = (ComponentWithTransitiveDependencyConstructor) context.get(Component.class).get();
         assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getName(), "foo");
         assertSame(((DependencyWithMultipleParameterConstructor) instance.getDependency()).getAge(), age);
     }

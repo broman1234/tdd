@@ -3,13 +3,11 @@ package com.example.tdd;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 
+import java.awt.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class Context {
     Map<Class<?>, Provider<?>> providers = new HashMap<>();
@@ -18,16 +16,16 @@ public class Context {
         providers.put(type, (Provider<Component>) () -> instance);
     }
 
-    public <Component> Component get(Class<?> componentClass) {
-        return (Component) providers.get(componentClass).get();
-
+    //return optional empty if the componentClass is not found instead of returning null
+    public <Component> Optional<Component> get(Class<Component> componentClass) {
+        return (Optional<Component>) Optional.ofNullable(providers.get(componentClass)).map(Provider::get);
     }
-
 
     public <Component, Implementation extends Component> void bind(Class<Component> componentClass, Class<Implementation> componentWithConstructorClass) {
         providers.put(componentClass, (Provider<Implementation>) () -> {
+
             Constructor<?> constructor = getInjectConstructor(componentWithConstructorClass);
-            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(this::get).toArray(Object[]::new);
+            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(parameterType -> get(parameterType).get()).toArray(Object[]::new);
 
             try {
                 return (Implementation) constructor.newInstance(dependencies);
