@@ -22,19 +22,35 @@ public class Context {
     }
 
     public <Component, Implementation extends Component> void bind(Class<Component> componentClass, Class<Implementation> componentWithConstructorClass) {
-        providers.put(componentClass, (Provider<Implementation>) () -> {
+        providers.put(componentClass, new ProviderImpl<Implementation>(componentWithConstructorClass, this));
+    }
 
+    //create a provider implementation class to implement Provider
+
+    public static class ProviderImpl<T> implements Provider<T> {
+        private Class<T> componentWithConstructorClass;
+
+        private Context context;
+
+        public ProviderImpl(Class<T> componentWithConstructorClass, Context context) {
+            this.componentWithConstructorClass = componentWithConstructorClass;
+            this.context = context;
+        }
+
+        @Override
+        public T get() {
             Constructor<?> constructor = getInjectConstructor(componentWithConstructorClass);
-            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(parameterType -> get(parameterType).get()).toArray(Object[]::new);
+            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(parameterType -> context.get(parameterType).orElseThrow(() -> new DependencyNotFoundException(parameterType, componentWithConstructorClass))).toArray(Object[]::new);
 
             try {
-                return (Implementation) constructor.newInstance(dependencies);
+                return (T) constructor.newInstance(dependencies);
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
-
-        });
+        }
     }
+
+
 
     private static <Component, Implementation extends Component> Constructor<?> getInjectConstructor(Class<Implementation> componentWithConstructorClass) {
         Constructor<?>[] declaredConstructors = componentWithConstructorClass.getDeclaredConstructors();

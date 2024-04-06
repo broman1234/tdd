@@ -1,14 +1,13 @@
 import com.example.tdd.AnnotatedConstructorNotFoundException;
 import com.example.tdd.Context;
+import com.example.tdd.DependencyNotFoundException;
 import com.example.tdd.MultipleInjectedConstructorException;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DITest {
     interface Component {
@@ -197,5 +196,14 @@ public class DITest {
         context.bind(String.class, "foo");
 
         assertThrows(AnnotatedConstructorNotFoundException.class, () -> context.get(Component.class));
+    }
+
+    @Test
+    void should_throw_exception_when_get_dependency_given_dependency_not_found_in_providers() {
+        context.bind(Component.class, ComponentWithTransitiveDependencyConstructor.class);
+
+        DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
+        assertEquals(Dependency.class, exception.getDependency());
+        assertEquals(ComponentWithTransitiveDependencyConstructor.class, exception.getComponent());
     }
 }
