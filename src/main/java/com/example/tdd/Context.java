@@ -40,7 +40,13 @@ public class Context {
         @Override
         public T get() {
             Constructor<?> constructor = getInjectConstructor(componentWithConstructorClass);
-            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(parameterType -> context.get(parameterType).orElseThrow(() -> new DependencyNotFoundException(parameterType, componentWithConstructorClass))).toArray(Object[]::new);
+
+            Object[] dependencies = Arrays.stream(constructor.getParameterTypes()).map(parameterType -> {
+                if (context.providers.containsKey(parameterType)) {
+                    throw new CyclicalDependencyException();
+                }
+                return context.get(parameterType).orElseThrow(() -> new DependencyNotFoundException(parameterType, componentWithConstructorClass));
+            }).toArray(Object[]::new);
 
             try {
                 return (T) constructor.newInstance(dependencies);

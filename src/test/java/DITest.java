@@ -1,7 +1,4 @@
-import com.example.tdd.AnnotatedConstructorNotFoundException;
-import com.example.tdd.Context;
-import com.example.tdd.DependencyNotFoundException;
-import com.example.tdd.MultipleInjectedConstructorException;
+import com.example.tdd.*;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +36,7 @@ public class DITest {
         }
     }
 
-    static public class DependencyWithMultipleParameterConstructor implements Dependency{
+    static public class DependencyWithMultipleParameterConstructor implements Dependency {
         String name;
         Integer age;
 
@@ -58,6 +55,21 @@ public class DITest {
         }
     }
 
+    //create a Dependency class with Component class dependency and constructor with @Inject annotation
+    static public class DependencyDependentOnComponent implements Dependency {
+        Component component;
+
+        @Inject
+        public DependencyDependentOnComponent(Component component) {
+            this.component = component;
+        }
+
+        public Component getComponent() {
+            return component;
+        }
+    }
+
+
     static public class ComponentWithTransitiveDependencyConstructor implements Component {
         Dependency dependency;
 
@@ -70,6 +82,21 @@ public class DITest {
             return dependency;
         }
     }
+
+    // create a class with cyclical dependency and constructor with @Inject annotation
+    static public class ComponentWithCyclicalDependency implements Component {
+        Dependency dependency;
+
+        @Inject
+        public ComponentWithCyclicalDependency(Dependency dependency) {
+            this.dependency = dependency;
+        }
+
+        public Dependency getDependency() {
+            return dependency;
+        }
+    }
+
     static public class ComponentWithDefaultConstructor implements Component {
         public ComponentWithDefaultConstructor() {
         }
@@ -77,6 +104,7 @@ public class DITest {
 
     static public class ComponentWithConstructor implements Component {
         String name;
+
         @Inject
         public ComponentWithConstructor(String name) {
             this.name = name;
@@ -108,6 +136,7 @@ public class DITest {
     }
 
     Context context;
+
     @BeforeEach
     void setUp() {
         context = new Context();
@@ -115,7 +144,8 @@ public class DITest {
 
     @Test
     void should_bind_type_to_a_specific_instance() {
-        Component instance = new Component() {};
+        Component instance = new Component() {
+        };
 
         context.bind(Component.class, instance);
 
@@ -205,5 +235,13 @@ public class DITest {
         DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
         assertEquals(Dependency.class, exception.getDependency());
         assertEquals(ComponentWithTransitiveDependencyConstructor.class, exception.getComponent());
+    }
+
+    @Test
+    void should_throw_cyclical_exception_when_bind_component_given_cyclical_dependency() {
+        context.bind(Component.class, ComponentWithCyclicalDependency.class);
+        context.bind(Dependency.class, DependencyDependentOnComponent.class);
+
+        assertThrows(CyclicalDependencyException.class, () -> context.get(Component.class));
     }
 }
